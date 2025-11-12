@@ -2,6 +2,7 @@ import logging
 from uuid import uuid4
 import json
 import time
+from kafka import KafkaProducer
 
 OK = {"status": "success"}
 
@@ -87,6 +88,27 @@ value_schema = """
 """
 
 
+# Kafka producer (singleton)
+_kafka_producer = None
+
+def get_kafka_producer():
+    """ Get or create Kafka producer """
+    global _kafka_producer
+    if _kafka_producer is None:
+        try:
+            _kafka_producer = KafkaProducer(
+                bootstrap_servers=['localhost:9092'],
+                value_serializer=lambda v: v if isinstance(v, bytes) else json.dumps(v).encode('utf-8'),
+                key_serializer=lambda k: k if isinstance(k, bytes) else (str(k).encode('utf-8') if k else None),
+                api_version=(0, 10, 1),
+                retries=3
+            )
+            logging.info("Kafka producer created successfully")
+        except Exception as e:
+            logging.error(f"Failed to create Kafka producer: {e}")
+            return None
+    return _kafka_producer
+
 # Simplified validation for testing without Kafka
 def is_valid(data, schema=None):
     """ Simple validation - just check if data has required fields. """
@@ -116,6 +138,28 @@ def collect(events):
         # Simple validation
         if is_valid(data):
             valid_count += 1
+            # Send to Kafka
+            try:
+                producer = get_kafka_producer()
+                if producer:
+                    # Send event to Kafka topic (send as individual event, not array)
+                    # Convert event to JSON string for Kafka
+                    event_json = json.dumps(data)
+                    future = producer.send(
+                        'acme.clickstream.raw.events',
+                        value=event_json.encode('utf-8'),
+                        key=str(data.get('id', 0)).encode('utf-8')
+                    )
+                    # Wait for send to complete (for reliability)
+                    future.get(timeout=10)
+                    logging.info(f"Event sent to Kafka: {data.get('id', 'no-id')}")
+                else:
+                    logging.warning("Kafka producer not available, event not sent to Kafka")
+            except Exception as e:
+                logging.error(f"Failed to send event to Kafka: {e}")
+                import traceback
+                logging.error(traceback.format_exc())
+            
             processed_events.append({
                 "status": "valid",
                 "data": data,

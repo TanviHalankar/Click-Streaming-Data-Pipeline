@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Demo - Click Streaming Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 1em;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 12px 30px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            min-width: 0;
+        }
+
+        .right-panel {
+            width: 380px;
+            background: #f8f9fa;
+            border-left: 2px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .search-bar {
+            margin-bottom: 25px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3.5em;
+        }
+
+        .product-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .product-price {
+            font-size: 1.4em;
+            color: #667eea;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-view:hover {
+            background: #5568d3;
+            transform: scale(1.02);
+        }
+
+        .btn-purchase {
+            background: #28a745;
+            color: white;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .btn-purchase:hover {
+            background: #218838;
+            transform: scale(1.02);
+        }
+
+        .event-log {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .event-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .event-log-header h3 {
+            color: #333;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .event-count-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .event-log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .event-log-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .event-log-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .event-log-content::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .event-log-content::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        .event-item {
+            background: white;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-size: 0.9em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .event-item:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateX(2px);
+        }
+
+        .event-type {
+            font-weight: 700;
+            color: #667eea;
+            margin-right: 8px;
+            font-size: 0.85em;
+        }
+
+        .event-status {
+            margin-right: 8px;
+        }
+
+        .event-time {
+            float: right;
+            color: #666;
+            font-size: 0.8em;
+            margin-top: 2px;
+        }
+
+        .event-details {
+            display: block;
+            margin-top: 5px;
+            color: #555;
+            font-size: 0.85em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛍️ E-Commerce Demo Store</h1>
+            <p>Real-time Clickstream Data Pipeline Demonstration</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span>Events streaming to pipeline</span>
+            </div>
+            <div id="eventCount">Events sent: <strong>0</strong></div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="🔍 Search products (e.g., laptop, smartphone, tablet)" 
+                           onkeyup="handleSearch(event)">
+                </div>
+
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be dynamically generated -->
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="event-log">
+                    <div class="event-log-header">
+                        <h3>📊 Real-time Event Log</h3>
+                        <span class="event-count-badge" id="eventCountBadge">0</span>
+                    </div>
+                    <div class="event-log-content" id="eventLog">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📡</div>
+                            <div>Waiting for user actions...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API endpoint
+        const API_URL = 'http://localhost:60000/collect';
+        
+        // Products data
+        const products = [
+            { id: 101, name: 'Laptop Pro', price: 1299, emoji: '💻' },
+            { id: 202, name: 'Smartphone X', price: 899, emoji: '📱' },
+            { id: 303, name: 'Tablet Air', price: 599, emoji: '📱' },
+            { id: 404, name: 'Wireless Headphones', price: 199, emoji: '🎧' },
+            { id: 505, name: 'Smart Watch', price: 399, emoji: '⌚' },
+            { id: 606, name: 'Gaming Mouse', price: 79, emoji: '🖱️' }
+        ];
+
+        let eventCount = 0;
+        let customerId = Math.floor(Math.random() * 100000) + 10000;
+
+        // Initialize page
+        function init() {
+            renderProducts();
+            sendEvent('click', '/home', null, null, 'https://google.com');
+        }
+
+        // Render products
+        function renderProducts() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = products.map(product => `
+                <div class="product-card" onclick="viewProduct(${product.id})">
+                    <div class="product-image">${product.emoji}</div>
+                    <div class="product-title">${product.name}</div>
+                    <div class="product-price">$${product.price}</div>
+                    <button class="btn btn-view" onclick="event.stopPropagation(); viewProduct(${product.id})">
+                        View Details
+                    </button>
+                    <button class="btn btn-purchase" onclick="event.stopPropagation(); purchaseProduct(${product.id})">
+                        Buy Now
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Send event to API
+        async function sendEvent(type, page, query, product, referrer) {
+            // Get product details if product ID is provided
+            const productDetails = product ? products.find(p => p.id === product) : null;
+            
+            const event = {
+                id: Date.now(),
+                type: type,
+                package_id: `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                event: {
+                    user_agent: navigator.userAgent,
+                    ip: '192.168.1.' + Math.floor(Math.random() * 255),
+                    customer_id: customerId,
+                    timestamp: new Date().toISOString(),
+                    page: page,
+                    query: query,
+                    product: product,
+                    product_name: productDetails ? productDetails.name : null,
+                    product_price: productDetails ? productDetails.price : null,
+                    referrer: referrer,
+                    position: null
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify([event])
+                });
+
+                if (response.ok) {
+                    eventCount++;
+                    document.getElementById('eventCount').innerHTML = `Events sent: <strong>${eventCount}</strong>`;
+                    document.getElementById('eventCountBadge').textContent = eventCount;
+                    addEventLog(type, page, product);
+                }
+            } catch (error) {
+                console.error('Error sending event:', error);
+                addEventLog(type, page, product, true);
+            }
+        }
+
+        // Add event to log
+        function addEventLog(type, page, product, error = false) {
+            const log = document.getElementById('eventLog');
+            
+            // Remove empty state if exists
+            const emptyState = log.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            const productName = product ? products.find(p => p.id === product)?.name : 'N/A';
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            
+            const statusIcon = error ? '❌' : '✅';
+            const statusText = error ? 'Failed' : 'Sent';
+            const statusColor = error ? 'red' : 'green';
+            
+            eventItem.innerHTML = `
+                <div>
+                    <span class="event-type">${type.toUpperCase()}</span>
+                    <span class="event-status" style="color: ${statusColor};">${statusIcon} ${statusText}</span>
+                    <span class="event-time">${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="event-details">
+                    Page: <strong>${page}</strong>
+                    ${product ? ` | Product: <strong>${productName}</strong>` : ''}
+                </div>
+            `;
+            
+            log.insertBefore(eventItem, log.firstChild);
+            
+            // Keep only last 20 events
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // Handle search
+        function handleSearch(event) {
+            if (event.key === 'Enter' && event.target.value.trim()) {
+                const query = event.target.value.trim();
+                sendEvent('view', '/products', query, null, '/home');
+            }
+        }
+
+        // View product
+        function viewProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            sendEvent('view', `/product/${productId}`, null, productId, '/products');
+        }
+
+        // Purchase product
+        function purchaseProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            sendEvent('purchase', '/checkout', null, productId, `/product/${productId}`);
+            alert(`✅ Purchase event sent for ${product.name}! Check Kafka UI to see it in the pipeline.`);
+        }
+
+        // Initialize on page load
+        window.onload = init;
+    </script>
+</body>
+</html>

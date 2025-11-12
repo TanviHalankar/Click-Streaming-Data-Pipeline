@@ -224,12 +224,19 @@ curl -X POST http://localhost:60000/collect -H "Content-Type: application/json" 
 3. Click on `acme.clickstream.raw.events`
 4. Go to "Messages" tab
 5. Configure filters:
-   - **Seek Type**: "Offset" → Enter "0"
-   - **Partitions**: "All items are selected"
+   - **Seek Type**: "Latest" (or "Offset" with empty/high number like 999999 for newest events)
+   - **Partitions**: "All items are selected" ⚠️ **IMPORTANT: Check all partitions**
    - **Key Serde**: "String"
    - **Value Serde**: "String" ⚠️ **IMPORTANT: Must be String, not SchemaRegistry**
 6. Click "Submit"
-7. You should see 3 events (if you sent them)
+7. **Scroll to the BOTTOM** of the messages table (newest events are at the bottom!)
+8. You should see events with latest timestamps
+
+**⚠️ Important Notes:**
+- **Newest events appear at the BOTTOM**, not the top
+- Events are distributed across partitions (0, 1, 2, 3, 4, 5) - check all partitions
+- After sending new events from the website, click "Submit" again to refresh
+- Look at the "Timestamp" column to find the most recent events
 
 **What to Show:**
 - Events in the table
@@ -420,7 +427,57 @@ A: "We can add more Kafka partitions, more Spark workers, and more storage. The 
 
 ## 🔍 Troubleshooting
 
-### **Problem 1: No messages in Kafka UI**
+### **Problem 1: New events not appearing in Kafka UI (showing old data only)**
+
+**Symptoms:**
+- Kafka UI shows old events but not new ones from the website
+- Events sent from demo website don't appear in Kafka UI
+- Only seeing test events from earlier
+
+**Solutions:**
+
+1. **Check Kafka UI Configuration:**
+   - Set "Seek Type" to "Latest" (or leave offset empty)
+   - Set "Value Serde" to "String" (NOT SchemaRegistry)
+   - Make sure "Partitions" shows "All items are selected"
+   - Click "Submit" button
+
+2. **Scroll to Bottom:**
+   - Newest events appear at the **BOTTOM** of the messages table, not the top
+   - Scroll down to see the most recent events
+   - Look at the "Timestamp" column - newest events have the latest time
+
+3. **Check All Partitions:**
+   - Events are distributed across partitions (0, 1, 2, 3, 4, 5)
+   - A new event might be in a different partition
+   - Make sure "All items are selected" in Partitions dropdown
+
+4. **Refresh After Sending:**
+   - After clicking a product on the website, go to Kafka UI
+   - Click "Submit" button again (this refreshes the view)
+   - Scroll to bottom to see the new event
+
+5. **Check API Server:**
+   - Look at the API server window (PowerShell running server.py)
+   - Should show: "Event sent to Kafka: [number]"
+   - If you see errors, the API might not be sending to Kafka
+
+6. **Verify Event Format:**
+   - Click on a message row to expand it
+   - Click "Value Preview" to see full JSON
+   - Should see `product_name` and `product_price` fields
+
+**Quick Test:**
+```powershell
+# Send test event directly to Kafka
+$testEvent = '{"id": ' + [int](Get-Date -UFormat %s) + ', "type": "test", "package_id": "test-' + (Get-Date -Format "HHmmss") + '", "event": {"user_agent": "Test", "ip": "192.168.1.1", "customer_id": 99999, "timestamp": "' + (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") + '", "page": "/test", "query": null, "product": 101, "product_name": "Laptop Pro", "product_price": 1299, "referrer": "direct", "position": null}}'
+echo $testEvent | docker exec -i kafka0 kafka-console-producer --bootstrap-server localhost:9092 --topic acme.clickstream.raw.events
+```
+Then check Kafka UI - you should see this event with current timestamp.
+
+---
+
+### **Problem 2: No messages in Kafka UI**
 
 **Symptoms:**
 - Kafka UI shows "No messages found"

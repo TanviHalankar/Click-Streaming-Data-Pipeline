@@ -308,6 +308,21 @@ acme.eu-west-1.stg.data.lake/
 - Monitor consumer groups
 - See message flow in real-time
 
+**How to View New Events in Kafka UI:**
+1. Go to Topics → `acme.clickstream.raw.events` → Messages tab
+2. Set "Seek Type" to "Latest" (or use high offset like 999999)
+3. Set "Value Serde" to "String" (NOT SchemaRegistry)
+4. Make sure "Partitions" shows "All items are selected"
+5. Click "Submit"
+6. **Scroll to the BOTTOM** - newest events appear at the bottom!
+7. Click on a message → "Value Preview" to see full JSON with product_name and product_price
+
+**Important Notes:**
+- Events are distributed across 6 partitions (0-5)
+- Newest events have the latest timestamp
+- After sending events from the website, click "Submit" again to refresh
+- Look at the Timestamp column to find the most recent events
+
 **Spark UI (http://localhost:18080):**
 - Monitor Spark jobs
 - See worker status

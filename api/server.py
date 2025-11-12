@@ -2,6 +2,7 @@ import json
 import argparse
 import logging as log
 from flask import Flask, request, Response
+from flask_cors import CORS
 from pipeline import input
 
 
@@ -21,6 +22,7 @@ def setup():
 
 port = setup()
 app = Flask(__name__)
+CORS(app)  # Enable CORS for demo website
 
 
 def answer(result):
